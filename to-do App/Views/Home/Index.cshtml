@@ -1,0 +1,169 @@
+﻿@model IEnumerable<to_do_Model>
+@{
+    ViewData["Title"] = "Home Page";
+}
+
+
+<button type="button" class="btn btn-primary btn-block" id="add" data-toggle="modal" data-target="#exampleModal">Add</button>
+<!-- Start !-->
+
+<div class="modal fade" id="exampleModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLabel">New Task</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form>
+                    <div class="form-group">
+                        <label for="recipient-name" class="col-form-label">Task:</label>
+                        <input type="text" class="form-control" placeholder="Enter your Task..." id="tasktext">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger" data-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="sendBtn">Send</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- END !-->
+<hr>
+
+<ul class="list-group" id="myUl">
+    @if (Model is not null)
+    {
+        @foreach (var item in Model)
+        {
+            <li class="list-group-item d-flex justify-content-between align-items-center" id="removeLI-@item.Id">
+                <div class="custom-control custom-switch">
+                    <input type="checkbox" checked="@item.isDone" class="custom-control-input" id="task-@item.Id"
+                   onchange="updateTask(@item.Id)">
+                    <label class="custom-control-label" for="task-@item.Id">@item.Task</label>
+                </div>
+                <button class="btn btn-danger btn-sm" onclick="submitDeleteForm('/DeleteTask/',@item.Id)">Delete</button>
+            </li>
+
+        }
+    }
+</ul>
+@section Scripts
+    {
+    <script>
+        $('#exampleModal').on('show.bs.modal', function (event) {
+            var button = $(event.relatedTarget) // Button that triggered the modal
+        })
+        $("#sendBtn").click(check);
+        function check() {
+            var text = $("#tasktext").val();
+            if (text === '') {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Oops...',
+                    text: 'Fill the Text Box',
+                })
+            } else {
+                console.log(text)
+                $.ajax('/SaveTask/' + text, {
+                    type: 'POST',  // http method
+                    success: function (result) {
+                        Swal.fire(
+                            'Good job!',
+                            `${result}`,
+                            'success'
+                        )
+                        $.ajax('/GetLastItem/', {
+                            type: 'GET',  // http method
+                            success: function (result) {
+                                console.log(result)
+                                $("#myUl").append(`
+                                <li class="list-group-item d-flex justify-content-between align-items-center" id="removeLI-${result.value.id}">
+                                    <div class="custom-control custom-switch">
+                                        <input type="checkbox" checked="${result.value.isDone}" class="custom-control-input" id="task-${result.value.id}" onchange="updateTask(${result.value.id})>
+                                        <label class="custom-control-label" for="task-${result.value.id}">${result.value.task}</label>
+                                     </div>
+                                    <button class="btn btn-danger btn-sm" onclick="submitDeleteForm('/DeleteTask/',${result.value.id})">Delete</button>
+                                    </li>
+                                `);
+                            }
+                        });
+                    },
+                    error: function (result) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Oops...',
+                            text: `${result}`,
+                        })
+                    }
+                });
+                $('#exampleModal').modal('hide');
+                $("#tasktext").val("");
+            }
+        }
+    </script>
+    <script>
+        function submitDeleteForm(url, id) {
+            Swal.fire({
+                title: 'آیا شما از حذف اطمینان دارید؟?',
+                text: "تغییرات غیر قابل بازگشت خواهند بود!",
+                icon: 'warning',
+                cancelButtonText: 'لغو',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'بله, حذفش کن!',
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        type: 'DELETE',
+                        url: url + id,
+                        contentType: 'application/x-www-form-urlencoded; charset=UTF-8',
+                        success: function (result) {
+                            Swal.fire({
+                                position: 'top-end',
+                                icon: 'success',
+                                title: result,
+                                showConfirmButton: false,
+                                timer: 1500
+                            });
+                            $("#removeLI-" + id).fadeOut(3000, function () { $(this).remove(); });
+                        },
+                        error: function () {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'اوپس...',
+                                text: 'مشکلی پیش اومد...!',
+                            });
+                        }
+                    })
+                }
+            })
+        }
+    </script>
+    <script>
+        function updateTask(id) {
+            $.ajax('/UpdateTask/'+id, {
+                type: 'PUT',  // http method
+                success: function (result) {
+                    Swal.fire(
+                        'Good job!',
+                        `${result}`,
+                        'success'
+                    )
+                },
+                error: function () {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'اوپس...',
+                        text: 'مشکلی پیش اومد...!',
+                    });
+                }
+            })
+        }
+    </script>
+}
